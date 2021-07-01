@@ -8,6 +8,16 @@
                :square="square" :selection="selection_prop" :selected.sync="selected_prop" :filter="filter" :loading="loading"
       >
 
+        <!-- pass through scoped slots -->
+        <template v-for="(_, scopedSlotName) in $scopedSlots" v-slot:[scopedSlotName]="slotData">
+          <slot :name="scopedSlotName" v-bind="slotData"></slot>
+        </template>
+
+        <!-- pass through normal slots -->
+        <template v-for="(_, slotName) in $slots" v-slot:[slotName]>
+          <slot :name="slotName"></slot>
+        </template>
+
         <template v-slot:header="props">
           <q-tr :props="props">
             <q-th auto-width v-if="selection_prop!='none'">
@@ -40,7 +50,7 @@
 
                       <div class="q-pa-sm q-mt-md">
                         <q-select map-options multiple emit-value filled v-model="column_options_selected[col.field]"
-                                  :options="column_options[col.field]" style="width: 150px !important;"/>
+                                  :options="getColumnOptions(col.field)" style="width: 150px !important;"/>
                       </div>
                       <q-btn color="primary" class="float-right  q-mr-sm q-mb-sm text-capitalize" size="sm"
                              v-close-popup @click="$set(column_options_selected,col.field,[])" label="Clear"/>
@@ -66,7 +76,7 @@
 
               <q-select v-if="col.hasOwnProperty('filter_type') && col.filter_type=='select'" map-options
                         multiple emit-value filled v-model="column_options_selected[col.field]"
-                        :options="column_options[col.field]" dense>
+                        :options="getColumnOptions(col.field)" dense>
                 <template v-slot:append>
                   <q-icon v-if="column_options_selected[col.field].length>0" name="close"
                           @click.stop="$set(column_options_selected,col.field,[])" class="cursor-pointer"/>
@@ -121,55 +131,6 @@
             </q-btn>
 
         </template>
-
-        <template v-slot:body="props">
-          <q-tr :props="props" v-if="!hasDefaultSlot">
-
-            <q-td v-if="selection_prop!='none'">
-              <q-checkbox color="primary" v-model="props.selected"/>
-            </q-td>
-            <q-td
-                    v-for="col,col_index in props.cols"
-                    :key="col.name"
-                    :props="props"
-            >
-              <q-btn size="sm" color="accent" round dense @click="props.expand = !props.expand" class="q-mr-sm"
-                     :icon="props.expand ? 'remove' : 'add'"
-                     v-if="groupby_filter && selected_group_by_filed['value']!='' && col_index==0"/>
-
-              {{ props.row[col.field] }}
-            </q-td>
-          </q-tr>
-          <q-tr v-if="groupby_filter &&  selected_group_by_filed['value']!=''" v-show="props.expand" :props="props">
-            <q-td :colspan="2">
-            <q-table
-                    :data="sub_grouped_data[props.row.name]"
-                    :columns="columns"
-                    row-key="name"
-                    :pagination="group_pagination"
-                    hide-bottom
-            >
-              <q-tr slot="header" slot-scope="props">
-                <q-th v-for="col in props.cols"
-                      :key="col.name" v-if="col.field!=selected_group_by_filed"
-                      :props="props">
-                  {{ col.label }}
-                </q-th>
-              </q-tr>
-              <template slot="body" slot-scope="props">
-                <q-tr :props="props">
-                  <q-td :key="col.name" v-if="col.field!=selected_group_by_filed" v-for="col in props.cols"
-                        :props="props">
-                    {{ props.row[col.field] }}
-                  </q-td>
-                </q-tr>
-              </template>
-            </q-table>
-          </q-td>
-          </q-tr>
-          <slot name="body" v-bind:row="props.row" v-if="hasDefaultSlot">
-          </slot>
-        </template>
         <template v-slot:loading v-if="this.$slots['loading']">
             <slot name="loading"></slot>
         </template>
@@ -209,7 +170,7 @@
 
     export default {
         name: "Grid",
-        props: ['data', 'columns', 'file_name', 'csv_download', 'excel_download', 'columns_filter', 'header_filter', 'draggable', 'classes', 'separator', 'dense', 'dark', 'flat', 'bordered', 'square', 'selection', 'selected', 'fullscreen', 'global_search', 'groupby_filter','visible_columns','pagination','loading'],
+        props: ['data', 'columns', 'file_filtered', 'file_name', 'csv_download', 'excel_download', 'columns_filter', 'header_filter', 'draggable', 'classes', 'separator', 'dense', 'dark', 'flat', 'bordered', 'square', 'selection', 'selected', 'fullscreen', 'global_search', 'groupby_filter','visible_columns','pagination','loading'],
         // props: {
         //   data: {
         //     type: [Array, Object],
@@ -335,6 +296,7 @@
                 let self = this;
 
                 this.column_options_selected = Object.assign({}, this.column_options_selected);
+                console.log(this.column_options_selected);
                 let table_Data = this.getFilteredData.filter(function (item) {
                     let i = '';
                     for (i = 0; i < self.columns.length; i++) {
@@ -364,7 +326,7 @@
             },
             hasDefaultSlot() {
                 return this.$scopedSlots.hasOwnProperty("body");
-            },
+            }
 
         },
         mounted() {
@@ -397,9 +359,18 @@
         },
         methods: {
             exportTable(type) {
+                // which data
+                let data_exp
+
+                if (this.file_filtered) {
+                    data_exp = this.getFilteredValuesData
+                } else {
+                    data_exp = this.data
+                }
+
                 // naive encoding to csv format
                 const content = [this.columns.map(col => wrapCsvValue(col.label))].concat(
-                    this.data.map(row => this.columns.map(col => wrapCsvValue(
+                    data_exp.map(row => this.columns.map(col => wrapCsvValue(
                         typeof col.field === 'function'
                             ? col.field(row)
                             : row[col.field === void 0 ? col.name : col.field],
@@ -468,7 +439,6 @@
                 }
                 return item
               });
-
               self.data.filter(function (item) {
                 self.columns.filter(function (column) {
                     if(item[column.field] != null) {
@@ -479,13 +449,28 @@
                     }
                 });
               });
-
               self.columns.filter(function (column) {
                 self.column_options[column.field] = [...new Map(self.column_options[column.field].map(item =>
                     [item['value'], item])).values()];
               });
-
               this.final_column = this.selected_group_by_filed['value'] != '' ? this.grouped_column : this.columns;
+          },
+          getColumnOptions(column) {
+              let column_option_simple = [...new Set(this.data.map(item => item[column]))];
+
+              let column_option = []
+
+              for ( let col of column_option_simple) {
+                  column_option.push({'label' : col.toString(), 'value': col.toString().toLowerCase().replace(/_/g, '_')})
+              }
+
+              return column_option
+          },
+          filterLabelOptions(val, update, abort) {
+            update(() => {
+                const needle = val.toLocaleLowerCase()
+                this.options = stringOptions.filter(v => v.toLocaleLowerCase().indexOf(needle) > -1)
+            })
           }
         },
         watch: {
@@ -498,7 +483,6 @@
             'columns': function () {
 
               this.setColumnsDefinition()
-
             }
         }
     }
