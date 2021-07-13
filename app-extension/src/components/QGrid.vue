@@ -131,6 +131,54 @@
             </q-btn>
 
         </template>
+        <template v-slot:body="props" v-if="(groupby_filter &&  selected_group_by_filed['value']!='') || selection_prop!='none'">
+          <q-tr :props="props" v-if="!hasDefaultSlot">
+
+            <q-td v-if="selection_prop!='none'">
+              <q-checkbox color="primary" v-model="props.selected"/>
+            </q-td>
+            <q-td
+                    v-for="col,col_index in props.cols"
+                    :key="col.name"
+                    :props="props"
+            >
+              <q-btn size="sm" color="accent" round dense @click="props.expand = !props.expand" class="q-mr-sm"
+                     :icon="props.expand ? 'remove' : 'add'"
+                     v-if="groupby_filter && selected_group_by_filed['value']!='' && col_index==0"/>
+
+              {{ props.row[col.field] }}
+            </q-td>
+          </q-tr>
+          <q-tr v-if="groupby_filter &&  selected_group_by_filed['value']!=''" v-show="props.expand" :props="props">
+            <q-td :colspan="2">
+            <q-table
+                    :data="sub_grouped_data[props.row.name]"
+                    :columns="columns"
+                    row-key="name"
+                    :pagination="group_pagination"
+                    hide-bottom
+            >
+              <q-tr slot="header" slot-scope="props">
+                <q-th v-for="col in props.cols"
+                      :key="col.name" v-if="col.field!=selected_group_by_filed"
+                      :props="props">
+                  {{ col.label }}
+                </q-th>
+              </q-tr>
+              <template slot="body" slot-scope="props">
+                <q-tr :props="props">
+                  <q-td :key="col.name" v-if="col.field!=selected_group_by_filed" v-for="col in props.cols"
+                        :props="props">
+                    {{ props.row[col.field] }}
+                  </q-td>
+                </q-tr>
+              </template>
+            </q-table>
+          </q-td>
+          </q-tr>
+          <slot name="body" v-bind:row="props.row" v-if="hasDefaultSlot">
+          </slot>
+        </template>
         <template v-slot:loading v-if="this.$slots['loading']">
             <slot name="loading"></slot>
         </template>
@@ -295,8 +343,7 @@
             getFilteredValuesData() {
                 let self = this;
 
-                this.column_options_selected = Object.assign({}, this.column_options_selected);
-                console.log(this.column_options_selected);
+                this.column_options_selected = Object.assign({}, this.column_options_selected)
                 let table_Data = this.getFilteredData.filter(function (item) {
                     let i = '';
                     for (i = 0; i < self.columns.length; i++) {
