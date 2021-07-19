@@ -1,6 +1,6 @@
 import QGrid from 'quasar-app-extension-qgrid/src/components/QGrid';
 
-export default ({ Vue }) => {
-  Vue.component('QGrid', QGrid);
-  Vue.component('q-grid', QGrid);
+export default ({ app }) => {
+  app.component('QGrid', QGrid);
+  app.component('q-grid', QGrid);
 }

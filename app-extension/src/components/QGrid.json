@@ -61,7 +61,7 @@
     }
   },
   "General": {
-    "data": {
+    "rows": {
       "type": "Array",
       "desc": "Rows of data to display",
       "examples": [

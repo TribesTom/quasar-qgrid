@@ -1,7 +1,7 @@
 <template>
   <span>
       <q-table :id="uuid"
-               :data="getFilteredValuesData"
+               :rows="getFilteredValuesData"
                :columns="final_column"
                row-key="name" :class="classes"  :visible-columns="visible_columns" :pagination="pagination"
                :separator="separator" :dense="dense" :dark="dark" :flat="flat" :bordered="bordered"
@@ -9,14 +9,10 @@
       >
 
         <!-- pass through scoped slots -->
-        <template v-for="(_, scopedSlotName) in $scopedSlots" v-slot:[scopedSlotName]="slotData">
-          <slot :name="scopedSlotName" v-bind="slotData"></slot>
+        <template v-for="(_, name) in $slots" v-slot:[name]="slotData">
+          <slot :name="name" v-bind="slotData" />
         </template>
 
-        <!-- pass through normal slots -->
-        <template v-for="(_, slotName) in $slots" v-slot:[slotName]>
-          <slot :name="slotName"></slot>
-        </template>
 
         <template v-slot:header="props">
           <q-tr :props="props">
@@ -179,9 +175,6 @@
           <slot name="body" v-bind:row="props.row" v-if="hasDefaultSlot">
           </slot>
         </template>
-        <template v-slot:loading v-if="this.$slots['loading']">
-            <slot name="loading"></slot>
-        </template>
       </q-table>
   </span>
 </template>
@@ -218,71 +211,7 @@
 
     export default {
         name: "Grid",
-        props: ['data', 'columns', 'file_filtered', 'file_name', 'csv_download', 'excel_download', 'columns_filter', 'header_filter', 'draggable', 'classes', 'separator', 'dense', 'dark', 'flat', 'bordered', 'square', 'selection', 'selected', 'fullscreen', 'global_search', 'groupby_filter','visible_columns','pagination','loading'],
-        // props: {
-        //   data: {
-        //     type: [Array, Object],
-        //     default: null
-        //   },
-        //   // column definition
-        //   columns: {
-        //     type: [Array, Object],
-        //     default: null
-        //   },
-        //   // column definition
-        //   file_name: {
-        //     type: String,
-        //     default: ''
-        //   },
-        //   csv_download: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   excel_download: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   columns_filter: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   header_filter: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   draggable: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   dense: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   dark: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   flat: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   bordered: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   square: {
-        //     type: Boolean,
-        //     default: () => false
-        //   },
-        //   classes: {
-        //     type: String,
-        //     default: ''
-        //   },
-        //   separator: {
-        //     type: String,
-        //     default: 'horizontal'
-        //   },
-        // },
+        props: ['rows', 'columns', 'file_filtered', 'file_name', 'csv_download', 'excel_download', 'columns_filter', 'header_filter', 'draggable', 'classes', 'separator', 'dense', 'dark', 'flat', 'bordered', 'square', 'selection', 'selected', 'fullscreen', 'global_search', 'groupby_filter','visible_columns','pagination','loading'],
         data() {
             return {
                 filter_data: {},
@@ -321,9 +250,7 @@
                 let table_columns = this.final_column.map(function (item) {
                     return item.field
                 });
-
-
-                let table_Data = this.data.filter(function (item) {
+                let table_Data = this.rows.filter(function (item) {
                     let i = '';
                     for (i = 0; i < table_columns.length; i++) {
                         if (self.filter_data[table_columns[i]] == '')
@@ -336,8 +263,7 @@
                         }
                     }
                     return true
-                });
-
+                });)
                 return table_Data
             },
             getFilteredValuesData() {
@@ -368,11 +294,10 @@
                     });
                     this.sub_grouped_data = grouped_data;
                 }
-
                 return table_Data;
             },
             hasDefaultSlot() {
-                return this.$scopedSlots.hasOwnProperty("body");
+                return this.$slots.hasOwnProperty("body");
             }
 
         },
@@ -381,8 +306,6 @@
         },
         created() {
             this.uuid = uid();
-
-            // console.log(this.selection===undefined);
             if (this.selection === undefined) {
                 this.selection_prop = 'none';
             } else {
@@ -412,7 +335,7 @@
                 if (this.file_filtered) {
                     data_exp = this.getFilteredValuesData
                 } else {
-                    data_exp = this.data
+                    data_exp = this.rows
                 }
 
                 // naive encoding to csv format
@@ -460,9 +383,9 @@
                     disabled: !this.draggable,
                     onEnd(event) {
                         // if (event.newIndex != 0) {
-                        let tmp = self.data[(event.oldIndex)];
-                        self.data[(event.oldIndex)] = self.data[(event.newIndex)];
-                        self.data[(event.newIndex)] = tmp;
+                        let tmp = self.rows[(event.oldIndex)];
+                        self.rows[(event.oldIndex)] = self.rows[(event.newIndex)];
+                        self.rows[(event.newIndex)] = tmp;
                         // }
                     },
                     onMove: function (/**Event*/evt, /**Event*/originalEvent) {
@@ -478,7 +401,7 @@
               self.column_options = {};
               self.columns.filter(function (item) {
                 self.column_options[item.field] = [];
-                self.$set(self.column_options_selected, item.field, []);
+                self.column_options_selected[item.field] = [];
                 self.filter_flags[item.field] = false;
                 if (item.hasOwnProperty('grouping') && item.grouping)
                 {
@@ -486,7 +409,7 @@
                 }
                 return item
               });
-              self.data.filter(function (item) {
+              self.rows.filter(function (item) {
                 self.columns.filter(function (column) {
                     if(item[column.field] != null) {
                       self.column_options[column.field].push({
@@ -503,7 +426,7 @@
               this.final_column = this.selected_group_by_filed['value'] != '' ? this.grouped_column : this.columns;
           },
           getColumnOptions(column) {
-              let column_option_simple = [...new Set(this.data.map(item => item[column]))];
+              let column_option_simple = [...new Set(this.rows.map(item => item[column]))];
 
               let column_option = []
 
