@@ -49,7 +49,7 @@
                                   :options="getColumnOptions(col.field)" style="width: 150px !important;"/>
                       </div>
                       <q-btn color="primary" class="float-right  q-mr-sm q-mb-sm text-capitalize" size="sm"
-                             v-close-popup @click="$set(column_options_selected,col.field,[])" label="Clear"/>
+                             v-close-popup @click="column_options_selected[col.field] =[]" label="Clear"/>
                     </q-menu>
                   </q-btn>
                 </div>
@@ -75,7 +75,7 @@
                         :options="getColumnOptions(col.field)" dense>
                 <template v-slot:append>
                   <q-icon v-if="column_options_selected[col.field].length>0" name="close"
-                          @click.stop="$set(column_options_selected,col.field,[])" class="cursor-pointer"/>
+                          @click.stop="column_options_selected[col.field]=[]" class="cursor-pointer"/>
                 </template>
               </q-select>
             </q-th>
@@ -263,7 +263,7 @@
                         }
                     }
                     return true
-                });)
+                });
                 return table_Data
             },
             getFilteredValuesData() {
